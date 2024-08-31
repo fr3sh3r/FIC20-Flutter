@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- hasil copy dari android>app>src>debug>AndroidManifest.xml -->
+    <!-- kalau tidak ada ini, maka setelah jadi apk akan loading terus karena ditolak akses keluarnya -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="flutter_hrm_inventory_pos_app"
         android:name="${applicationName}"

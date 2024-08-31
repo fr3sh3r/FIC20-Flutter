@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/data/datasources/auth_local_datasource.dart';
 
 import '../../../core/core.dart';
+import '../../home/pages/main_page.dart';
+import '../bloc/login/login_bloc.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -50,11 +54,51 @@ class LoginPage extends StatelessWidget {
                   obscureText: true,
                 ),
                 const SpaceHeight(80.0),
-                Button.filled(
-                  onPressed: () {
-                    //context.pushReplacement(const MainPage());
+                BlocListener<LoginBloc, LoginState>(
+                  listener: (context, state) {
+                    state.maybeWhen(
+                      orElse: () {},
+                      loaded: (authResponseModel) {
+                        AuthLocalDatasource().saveAuthData(authResponseModel);
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => const MainPage(),
+                          ),
+                        );
+                      },
+                      error: (message) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(message),
+                            backgroundColor: AppColors.red,
+                          ),
+                        );
+                      },
+                    );
                   },
-                  label: 'Login',
+                  child: BlocBuilder<LoginBloc, LoginState>(
+                      builder: (context, state) {
+                    return state.maybeWhen(
+                      orElse: () {
+                        return Button.filled(
+                          onPressed: () {
+                            context.read<LoginBloc>().add(
+                                  LoginEvent.login(
+                                    email: emailController.text,
+                                    password: passwordController.text,
+                                  ),
+                                );
+                          },
+                          label: 'Login',
+                        );
+                      },
+                      loading: () {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      },
+                    );
+                  }),
                 ),
               ],
             ),
