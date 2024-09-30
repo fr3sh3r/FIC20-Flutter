@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/bloc/designation/create_designation/create_designation_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/bloc/designation/get_designation/get_designation_bloc.dart';
 import '../../../core/core.dart';
 
 class AddNewDesignation extends StatefulWidget {
@@ -71,9 +73,45 @@ class _AddNewDesignationState extends State<AddNewDesignation> {
                     )),
                     const SpaceWidth(16.0),
                     Flexible(
-                      child: Button.filled(
-                        onPressed: widget.onConfirmTap,
-                        label: 'Create',
+                      child: BlocConsumer<CreateDesignationBloc,
+                          CreateDesignationState>(
+                        listener: (context, state) {
+                          state.maybeWhen(
+                            orElse: () {},
+                            created: () {
+                              context.read<GetDesignationBloc>().add(
+                                    const GetDesignationEvent.getDesignations(),
+                                  );
+                              context.pop();
+                            },
+                            error: (message) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(message),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        builder: (context, state) {
+                          return state.maybeWhen(orElse: () {
+                            return Button.filled(
+                              onPressed: () {
+                                context.read<CreateDesignationBloc>().add(
+                                      CreateDesignationEvent.createDesignation(
+                                        name: designationNameController.text,
+                                        description: descriptionController.text,
+                                      ),
+                                    );
+                              },
+                              label: 'Create',
+                            );
+                          }, loading: () {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          });
+                        },
                       ),
                     ),
                   ],

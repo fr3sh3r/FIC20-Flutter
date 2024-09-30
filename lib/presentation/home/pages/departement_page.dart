@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/bloc/department/get_department/get_department_bloc.dart';
 
 import '../../../core/core.dart';
 import '../dialogs/add_new_departement.dart';
 import '../dialogs/delete_dialog.dart';
-import '../dialogs/edit_departement.dart';
+import '../dialogs/edit_department.dart';
 import '../models/departement_model.dart';
 import '../widgets/app_bar_widget.dart';
-import '../widgets/pagination_widget.dart';
 
 class DepartementPage extends StatefulWidget {
   const DepartementPage({super.key});
@@ -24,6 +25,9 @@ class _DepartementPageState extends State<DepartementPage> {
   @override
   void initState() {
     searchResult = departements;
+    context
+        .read<GetDepartmentBloc>()
+        .add(const GetDepartmentEvent.getDepartments());
     super.initState();
   }
 
@@ -65,134 +69,146 @@ class _DepartementPageState extends State<DepartementPage> {
                     Button.filled(
                       onPressed: () => showDialog(
                         context: context,
-                        builder: (context) => AddNewDepartement(
-                          onConfirmTap: () {},
-                        ),
+                        builder: (context) => const AddNewDepartment(),
                       ),
-                      label: 'Add New Departement',
+                      label: 'Add New Department',
                       fontSize: 14.0,
                       width: 250.0,
                     ),
                   ],
                 ),
               ),
-              if (isEmptyData) ...[
-                const Padding(
-                  padding: EdgeInsets.all(70.0),
-                  child: Center(
-                    child: EmptyPlaceholder2(),
-                  ),
-                ),
-              ] else ...[
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: DataTable(
-                              dataRowMinHeight: 30.0,
-                              dataRowMaxHeight: 60.0,
-                              columns: [
-                                DataColumn(
-                                  label: SizedBox(
-                                    height: 24.0,
-                                    width: 24.0,
-                                    child: Checkbox(
-                                      value: false,
-                                      onChanged: (value) {},
-                                    ),
+              BlocBuilder<GetDepartmentBloc, GetDepartmentState>(
+                builder: (context, state) {
+                  return state.maybeWhen(
+                    orElse: () => const SizedBox(),
+                    loading: () {
+                      return const Padding(
+                        padding: EdgeInsets.all(70.0),
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    },
+                    loaded: (departments) {
+                      return Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.topLeft,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    dataRowMinHeight: 30.0,
+                                    dataRowMaxHeight: 60.0,
+                                    columns: [
+                                      DataColumn(
+                                        label: SizedBox(
+                                          height: 24.0,
+                                          width: 24.0,
+                                          child: Checkbox(
+                                            value: false,
+                                            onChanged: (value) {},
+                                          ),
+                                        ),
+                                      ),
+                                      const DataColumn(
+                                          label: Text('Departement Name')),
+                                      const DataColumn(
+                                          label: Text('Description')),
+                                      const DataColumn(label: Text('')),
+                                    ],
+                                    rows: departments.isEmpty
+                                        ? [
+                                            const DataRow(
+                                              cells: [
+                                                DataCell(Row(
+                                                  children: [
+                                                    Icon(Icons.highlight_off),
+                                                    SpaceWidth(4.0),
+                                                    Text(
+                                                        'Data tidak ditemukan..'),
+                                                  ],
+                                                )),
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                              ],
+                                            ),
+                                          ]
+                                        : departments
+                                            .map(
+                                              (item) => DataRow(cells: [
+                                                DataCell(
+                                                  SizedBox(
+                                                    height: 24.0,
+                                                    width: 24.0,
+                                                    child: Checkbox(
+                                                      value: false,
+                                                      onChanged: (value) {},
+                                                    ),
+                                                  ),
+                                                ),
+                                                DataCell(Text(
+                                                  item.name!,
+                                                  style: const TextStyle(
+                                                    fontSize: 16.0,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: AppColors.black,
+                                                  ),
+                                                )),
+                                                DataCell(Text(
+                                                    item.description ?? '')),
+                                                DataCell(Row(
+                                                  children: [
+                                                    IconButton(
+                                                      onPressed: () =>
+                                                          showDialog(
+                                                        context: context,
+                                                        builder: (context) =>
+                                                            DeleteDialog(
+                                                                onConfirmTap:
+                                                                    () {},
+                                                                id: item.id),
+                                                      ),
+                                                      icon: const Icon(
+                                                          Icons.delete_outline),
+                                                    ),
+                                                    IconButton(
+                                                      onPressed: () =>
+                                                          showDialog(
+                                                        context: context,
+                                                        builder: (context) =>
+                                                            EditDepartement(
+                                                          item: item,
+                                                          onConfirmTap: () {},
+                                                        ),
+                                                      ),
+                                                      icon: const Icon(
+                                                          Icons.edit_outlined),
+                                                    ),
+                                                  ],
+                                                )),
+                                              ]),
+                                            )
+                                            .toList(),
                                   ),
                                 ),
-                                const DataColumn(
-                                    label: Text('Departement Name')),
-                                const DataColumn(label: Text('Description')),
-                                const DataColumn(label: Text('')),
-                              ],
-                              rows: searchResult.isEmpty
-                                  ? [
-                                      const DataRow(
-                                        cells: [
-                                          DataCell(Row(
-                                            children: [
-                                              Icon(Icons.highlight_off),
-                                              SpaceWidth(4.0),
-                                              Text('Data tidak ditemukan..'),
-                                            ],
-                                          )),
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                        ],
-                                      ),
-                                    ]
-                                  : searchResult
-                                      .map(
-                                        (item) => DataRow(cells: [
-                                          DataCell(
-                                            SizedBox(
-                                              height: 24.0,
-                                              width: 24.0,
-                                              child: Checkbox(
-                                                value: false,
-                                                onChanged: (value) {},
-                                              ),
-                                            ),
-                                          ),
-                                          DataCell(Text(
-                                            item.departementName,
-                                            style: const TextStyle(
-                                              fontSize: 16.0,
-                                              fontWeight: FontWeight.w500,
-                                              color: AppColors.black,
-                                            ),
-                                          )),
-                                          DataCell(Text(item.description)),
-                                          DataCell(Row(
-                                            children: [
-                                              IconButton(
-                                                onPressed: () => showDialog(
-                                                  context: context,
-                                                  builder: (context) =>
-                                                      DeleteDialog(
-                                                    onConfirmTap: () {},
-                                                  ),
-                                                ),
-                                                icon: const Icon(
-                                                    Icons.delete_outline),
-                                              ),
-                                              IconButton(
-                                                onPressed: () => showDialog(
-                                                  context: context,
-                                                  builder: (context) =>
-                                                      EditDepartement(
-                                                    item: item,
-                                                    onConfirmTap: () {},
-                                                  ),
-                                                ),
-                                                icon: const Icon(
-                                                    Icons.edit_outlined),
-                                              ),
-                                            ],
-                                          )),
-                                        ]),
-                                      )
-                                      .toList(),
-                            ),
+                              ),
+                              // if (searchResult.isNotEmpty)
+                              //   const Padding(
+                              //     padding: EdgeInsets.all(16.0),
+                              //     child: PaginationWidget(),
+                              //   ),
+                            ],
                           ),
                         ),
-                        if (searchResult.isNotEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: PaginationWidget(),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                      );
+                    },
+                  );
+                },
+              )
             ],
           ),
         ),

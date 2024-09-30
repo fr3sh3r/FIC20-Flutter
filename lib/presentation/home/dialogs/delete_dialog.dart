@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/bloc/department/delete_department/delete_department_bloc.dart';
 
 import '../../../core/core.dart';
+import '../bloc/department/get_department/get_department_bloc.dart';
 
 class DeleteDialog extends StatelessWidget {
+  final int? id;
   final VoidCallback onConfirmTap;
-  const DeleteDialog({super.key, required this.onConfirmTap});
+  const DeleteDialog({
+    super.key,
+    this.id,
+    required this.onConfirmTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,19 +36,29 @@ class DeleteDialog extends StatelessWidget {
             Row(
               children: [
                 Flexible(
-                    child: Button.outlined(
-                  onPressed: () => context.pop(),
-                  label: 'No, cancel',
-                )),
+                  child: Button.outlined(
+                    onPressed: () => context.pop(),
+                    label: 'No, cancel',
+                  ),
+                ),
                 const SpaceWidth(16.0),
                 Flexible(
                   child: Button.filled(
-                    onPressed: onConfirmTap,
+                    onPressed: () {
+                      context.read<DeleteDepartmentBloc>().add(
+                          DeleteDepartmentEvent.deleteDepartment(id: id ?? 0));
+                      context
+                          .read<GetDepartmentBloc>()
+                          .add(const GetDepartmentEvent.getDepartments());
+                      context.pop();
+                    },
                     label: 'Yes, Confirm',
                   ),
                 ),
               ],
             ),
+
+            // Flexible(
           ],
         ),
       ),

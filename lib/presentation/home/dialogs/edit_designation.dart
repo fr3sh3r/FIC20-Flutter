@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/data/models/response/designation_response_model.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/bloc/designation/get_designation/get_designation_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/bloc/designation/update_designation/update_designation_bloc.dart';
 
 import '../../../core/core.dart';
-import '../models/designation_model.dart';
 
 class EditDesignation extends StatefulWidget {
-  final DesignationModel item;
+  final Designation item;
   final VoidCallback onConfirmTap;
   const EditDesignation({
     super.key,
@@ -22,8 +25,7 @@ class _EditDesignationState extends State<EditDesignation> {
 
   @override
   void initState() {
-    designationNameController =
-        TextEditingController(text: widget.item.designationName);
+    designationNameController = TextEditingController(text: widget.item.name);
     descriptionController =
         TextEditingController(text: widget.item.description);
     super.initState();
@@ -79,9 +81,31 @@ class _EditDesignationState extends State<EditDesignation> {
                     )),
                     const SpaceWidth(16.0),
                     Flexible(
-                      child: Button.filled(
-                        onPressed: widget.onConfirmTap,
-                        label: 'Update',
+                      child: BlocListener<UpdateDesignationBloc,
+                          UpdateDesignationState>(
+                        listener: (context, state) {
+                          state.maybeMap(
+                            orElse: () {},
+                            updated: (_) {
+                              context.read<GetDesignationBloc>().add(
+                                    const GetDesignationEvent.getDesignations(),
+                                  );
+                              context.pop();
+                            },
+                          );
+                        },
+                        child: Button.filled(
+                          onPressed: () {
+                            context.read<UpdateDesignationBloc>().add(
+                                  UpdateDesignationEvent.updateDesignation(
+                                    id: widget.item.id!,
+                                    name: designationNameController.text,
+                                    description: descriptionController.text,
+                                  ),
+                                );
+                          },
+                          label: 'Update',
+                        ),
                       ),
                     ),
                   ],

@@ -8,6 +8,8 @@ class DepartementModel {
   });
 }
 
+
+// ini adalah seperti data dummy, tapi tidak dalam database, supaya ada tampilan data di halaman department page
 final departements = [
   DepartementModel(
     departementName: 'Human Resources (HR)',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/pages/basic_salary_page.dart';
 
 import '../../../../../../core/core.dart';
 import '../widgets/nav_item.dart';
@@ -34,7 +35,7 @@ class _MainPageState extends State<MainPage> {
       const ShiftPage(),
       const HolidayPage(),
       const LeavesPage(),
-      const Center(child: Text('This is page 9')),
+      const BasicSalaryPage(), //Center(child: Text('This is page 9')),
       const Center(child: Text('This is page 10')),
       const Center(child: Text('This is page 11')),
     ];
@@ -128,22 +129,28 @@ class _MainPageState extends State<MainPage> {
                         onTap: () => _onItemTapped(7),
                       ),
                       NavItem(
-                        label: 'Attendance',
+                        label: 'Basic Salary',
                         iconPath: Assets.icons.nav.attendance.path,
                         isActive: _selectedIndex == 8,
                         onTap: () => _onItemTapped(8),
                       ),
                       NavItem(
-                        label: 'Payroll',
-                        iconPath: Assets.icons.nav.payroll.path,
+                        label: 'Attendance',
+                        iconPath: Assets.icons.nav.attendance.path,
                         isActive: _selectedIndex == 9,
                         onTap: () => _onItemTapped(9),
                       ),
                       NavItem(
-                        label: 'Settings',
-                        iconPath: Assets.icons.nav.settings.path,
+                        label: 'Payroll',
+                        iconPath: Assets.icons.nav.payroll.path,
                         isActive: _selectedIndex == 10,
                         onTap: () => _onItemTapped(10),
+                      ),
+                      NavItem(
+                        label: 'Settings',
+                        iconPath: Assets.icons.nav.settings.path,
+                        isActive: _selectedIndex == 11,
+                        onTap: () => _onItemTapped(11),
                       ),
                     ],
                   ),

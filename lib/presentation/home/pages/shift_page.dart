@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/bloc/shift/update_shift/update_shift_bloc.dart';
 
 import '../../../core/core.dart';
+import '../bloc/shift/delete_shift/delete_shift_bloc.dart';
+import '../bloc/shift/get_shift/get_shift_bloc.dart';
 import '../dialogs/add_new_shift.dart';
-import '../dialogs/delete_dialog.dart';
 import '../dialogs/edit_shift.dart';
-import '../models/shift_model.dart';
+import '../dialogs/generic_delete_dialog.dart';
 import '../widgets/app_bar_widget.dart';
-import '../widgets/pagination_widget.dart';
+import 'dart:developer' as developer;
 
 class ShiftPage extends StatefulWidget {
   const ShiftPage({super.key});
@@ -16,40 +19,29 @@ class ShiftPage extends StatefulWidget {
 }
 
 class _ShiftPageState extends State<ShiftPage> {
-  bool isEmptyData = false;
-  bool isAddForm = true;
-  ShiftModel? shiftModel;
-
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
   final searchController = TextEditingController();
-  late List<ShiftModel> searchResult;
 
   @override
   void initState() {
-    searchResult = shifts;
+    context.read<GetShiftBloc>().add(const GetShiftEvent.getShift());
     super.initState();
   }
 
-  void showEndDrawer(bool isAdd, [ShiftModel? item]) {
-    setState(() {
-      isAddForm = isAdd;
-      shiftModel = item;
-    });
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
+  TimeOfDay? parseTime(String? time) {
+    if (time == null || time.isEmpty)
+      return null; // Return null if time is null
+    final parts = time.split(':');
+    if (parts.length != 2) return null; // Ensure it's a valid time string
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
 
-  Widget endDrawerWidget() {
-    if (isAddForm) {
-      return const AddNewShift();
-    }
-    return EditShift(item: shiftModel!);
+    print('Parsed Time - Hour: $hour, Minute: $minute'); // Debugging line
+    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
-      endDrawer: endDrawerWidget(),
       appBar: const PreferredSize(
         preferredSize: Size.fromHeight(70.0),
         child: AppBarWidget(title: 'Shift'),
@@ -71,19 +63,21 @@ class _ShiftPageState extends State<ShiftPage> {
                         controller: searchController,
                         hintText: 'Quick search..',
                         onChanged: (value) {
-                          searchResult = shifts
-                              .where((element) => element.name
-                                  .toLowerCase()
-                                  .contains(
-                                      searchController.text.toLowerCase()))
-                              .toList();
-                          setState(() {});
+                          // Implement search functionality here if needed
                         },
                       ),
                     ),
                     const SpaceWidth(16.0),
                     Button.filled(
-                      onPressed: () => showEndDrawer(true),
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (context) => const AddNewShift(),
+                      ).then((_) {
+                        // After successful creation (assuming AddNewShift returns a value on success)
+                        context
+                            .read<GetShiftBloc>()
+                            .add(const GetShiftEvent.getShift());
+                      }),
                       label: 'Add New Shift',
                       fontSize: 14.0,
                       width: 250.0,
@@ -91,150 +85,297 @@ class _ShiftPageState extends State<ShiftPage> {
                   ],
                 ),
               ),
-              if (isEmptyData) ...[
-                const Padding(
-                  padding: EdgeInsets.all(70.0),
-                  child: Center(
-                    child: EmptyPlaceholder2(),
-                  ),
-                ),
-              ] else ...[
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: DataTable(
-                              dataRowMinHeight: 30.0,
-                              dataRowMaxHeight: 60.0,
-                              columns: [
-                                DataColumn(
-                                  label: SizedBox(
-                                    height: 24.0,
-                                    width: 24.0,
-                                    child: Checkbox(
-                                      value: false,
-                                      onChanged: (value) {},
-                                    ),
-                                  ),
-                                ),
-                                const DataColumn(label: Text('Name')),
-                                const DataColumn(label: Text('Clock In Time')),
-                                const DataColumn(label: Text('Clock Out Time')),
-                                const DataColumn(label: Text('Self Clocking')),
-                                const DataColumn(
-                                    label: Text('Late Mark After')),
-                                const DataColumn(label: Text('')),
-                              ],
-                              rows: searchResult.isEmpty
-                                  ? [
-                                      const DataRow(
-                                        cells: [
-                                          DataCell(Row(
-                                            children: [
-                                              Icon(Icons.highlight_off),
-                                              SpaceWidth(4.0),
-                                              Text('Data tidak ditemukan..'),
-                                            ],
-                                          )),
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                        ],
-                                      ),
-                                    ]
-                                  : searchResult
-                                      .map(
-                                        (item) => DataRow(cells: [
-                                          DataCell(
-                                            SizedBox(
-                                              height: 24.0,
-                                              width: 24.0,
-                                              child: Checkbox(
-                                                value: false,
-                                                onChanged: (value) {},
-                                              ),
-                                            ),
+              BlocBuilder<GetShiftBloc, GetShiftState>(
+                builder: (context, state) {
+                  return state.maybeWhen(
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    loaded: (shifts) {
+                      return Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.topLeft,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    dataRowMinHeight: 30.0,
+                                    dataRowMaxHeight: 60.0,
+                                    columns: [
+                                      DataColumn(
+                                        label: SizedBox(
+                                          height: 24.0,
+                                          width: 24.0,
+                                          child: Checkbox(
+                                            value: false,
+                                            onChanged: (value) {},
                                           ),
-                                          DataCell(Text(
-                                            item.name,
-                                            style: const TextStyle(
-                                              fontSize: 16.0,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.black,
-                                            ),
-                                          )),
-                                          DataCell(Text(item.clockInTime
-                                              .toFormattedTime())),
-                                          DataCell(Text(item.clockOutTime
-                                              .toFormattedTime())),
-                                          DataCell(Text(
-                                              '${item.lateMarkAfter} Minutes')),
-                                          DataCell(Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8.0, vertical: 4.0),
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(6.0),
-                                              border: Border.all(
-                                                  color: AppColors.stroke),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Badge(
-                                                  backgroundColor:
-                                                      item.isSelfClocking
-                                                          ? AppColors.green
-                                                          : AppColors.red,
-                                                ),
-                                                const SpaceWidth(8.0),
-                                                Text(item.selfClocking),
+                                        ),
+                                      ),
+                                      const DataColumn(label: Text('Name')),
+                                      const DataColumn(
+                                          label: Text('Clock In Time')),
+                                      const DataColumn(
+                                          label: Text('Clock Out Time')),
+                                      // const DataColumn(
+                                      //     label: Text('Self Clocking')),
+                                      const DataColumn(
+                                          label: Text('Late Mark After')),
+                                      const DataColumn(
+                                          label: Text('Self Clocking')),
+                                      const DataColumn(label: Text('')),
+                                    ],
+                                    rows: shifts.isEmpty
+                                        ? [
+                                            const DataRow(
+                                              cells: [
+                                                DataCell(Row(
+                                                  children: [
+                                                    Icon(Icons.highlight_off),
+                                                    SpaceWidth(4.0),
+                                                    Text('Data not found..'),
+                                                  ],
+                                                )),
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                                DataCell.empty,
                                               ],
                                             ),
-                                          )),
-                                          DataCell(Row(
-                                            children: [
-                                              IconButton(
-                                                onPressed: () => showDialog(
-                                                  context: context,
-                                                  builder: (context) =>
-                                                      DeleteDialog(
-                                                    onConfirmTap: () {},
+                                          ]
+                                        : shifts
+                                            .map(
+                                              (item) => DataRow(cells: [
+                                                DataCell(
+                                                  SizedBox(
+                                                    height: 24.0,
+                                                    width: 24.0,
+                                                    child: Checkbox(
+                                                      value: false,
+                                                      onChanged: (value) {},
+                                                    ),
                                                   ),
                                                 ),
-                                                icon: const Icon(
-                                                    Icons.delete_outline),
-                                              ),
-                                              IconButton(
-                                                onPressed: () =>
-                                                    showEndDrawer(false, item),
-                                                icon: const Icon(
-                                                    Icons.edit_outlined),
-                                              ),
-                                            ],
-                                          )),
-                                        ]),
-                                      )
-                                      .toList(),
-                            ),
+                                                DataCell(Text(
+                                                  item.name!,
+                                                  style: const TextStyle(
+                                                    fontSize: 16.0,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: AppColors.black,
+                                                  ),
+                                                )),
+                                                DataCell(Text(item
+                                                        .clockInTime ??
+                                                    'N/A')), // Provide fallback 'N/A' if null
+                                                DataCell(Text(
+                                                    item.clockOutTime ??
+                                                        'N/A')),
+                                                DataCell(Text(
+                                                    '${item.lateMarkAfter ?? 0} Minutes')), // Fallback for lateMarkAfter
+                                                DataCell(Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 8.0,
+                                                    vertical: 4.0,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            6.0),
+                                                    border: Border.all(
+                                                        color:
+                                                            AppColors.stroke),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      Badge(
+                                                        backgroundColor:
+                                                            item.isSelfClocking ==
+                                                                    true
+                                                                ? AppColors
+                                                                    .green
+                                                                : AppColors.red,
+                                                      ),
+                                                      const SpaceWidth(8.0),
+                                                      Text(
+                                                          item.isSelfClocking ==
+                                                                  true
+                                                              ? 'Yes'
+                                                              : 'No'),
+                                                    ],
+                                                  ),
+                                                )),
+                                                DataCell(Row(
+                                                  children: [
+                                                    IconButton(
+                                                      onPressed: () =>
+                                                          showDialog(
+                                                        context: context,
+                                                        builder: (context) =>
+                                                            GenericDeleteDialog(
+                                                          itemName: item.name ??
+                                                              'Shift',
+                                                          onConfirmTap:
+                                                              () async {
+                                                            try {
+                                                              // Perform the delete operation
+                                                              context
+                                                                  .read<
+                                                                      DeleteShiftBloc>()
+                                                                  .add(
+                                                                    DeleteShiftEvent.deleteShift(
+                                                                        id: item
+                                                                            .id!),
+                                                                  );
+                                                              // Refresh the list after deletion
+                                                              context
+                                                                  .read<
+                                                                      GetShiftBloc>()
+                                                                  .add(const GetShiftEvent
+                                                                      .getShift());
+
+                                                              // Return true if the operation was successful
+                                                              return true;
+                                                            } catch (e) {
+                                                              // Handle the error (e.g., log it)
+                                                              developer.log(
+                                                                'Error deleting item: $e',
+                                                                name:
+                                                                    'ShiftPage',
+                                                              );
+                                                              // Return false if the operation failed
+                                                              return false;
+                                                            }
+                                                          },
+                                                        ),
+                                                      ),
+                                                      icon: const Icon(
+                                                          Icons.delete_outline),
+                                                    ),
+                                                    // IconButton(
+                                                    //   onPressed: () =>
+                                                    //       showDialog(
+                                                    //     context: context,
+                                                    //     builder: (context) =>
+                                                    //         EditShift(
+                                                    //       item: item,
+                                                    //       onConfirmTap: () {},
+                                                    //     ),
+                                                    //   ),
+                                                    //   icon: const Icon(
+                                                    //       Icons.edit_outlined),
+                                                    // ),
+                                                    IconButton(
+                                                      onPressed: () {
+                                                        if (item.id != null &&
+                                                            item.companyId !=
+                                                                null &&
+                                                            item.createdBy !=
+                                                                null) {
+                                                          showDialog(
+                                                            context: context,
+                                                            builder:
+                                                                (context) =>
+                                                                    EditShift(
+                                                              shift: item,
+                                                              shiftId: item
+                                                                  .id!, // Use '!' only if you have ensured item.id is not null
+                                                              companyId: item
+                                                                  .companyId!,
+                                                              createdBy: item
+                                                                  .createdBy!,
+                                                              initialName: item
+                                                                      .name ??
+                                                                  '', // Provide fallback value for name
+                                                              initialClockInTime:
+                                                                  parseTime(item
+                                                                          .clockInTime) ??
+                                                                      const TimeOfDay(
+                                                                          hour:
+                                                                              9,
+                                                                          minute:
+                                                                              0),
+                                                              initialClockOutTime: parseTime(item
+                                                                      .clockOutTime) ??
+                                                                  const TimeOfDay(
+                                                                      hour: 17,
+                                                                      minute:
+                                                                          0),
+                                                              initialIsSelfClocking:
+                                                                  item.isSelfClocking ??
+                                                                      false, // Pass the initial value
+                                                            ),
+                                                          ).then(
+                                                              (updatedShift) {
+                                                            if (updatedShift !=
+                                                                null) {
+                                                              context
+                                                                  .read<
+                                                                      UpdateShiftBloc>()
+                                                                  .add(
+                                                                    UpdateShiftEvent
+                                                                        .updateShift(
+                                                                      id: updatedShift
+                                                                          .id!,
+                                                                      name: updatedShift
+                                                                          .name!,
+                                                                      clockInTime:
+                                                                          updatedShift
+                                                                              .clockInTime!,
+                                                                      clockOutTime:
+                                                                          updatedShift
+                                                                              .clockOutTime!,
+                                                                      lateMarkAfter:
+                                                                          updatedShift
+                                                                              .lateMarkAfter!,
+                                                                      isSelfClocking:
+                                                                          updatedShift
+                                                                              .isSelfClocking!,
+                                                                    ),
+                                                                  );
+                                                              context
+                                                                  .read<
+                                                                      GetShiftBloc>()
+                                                                  .add(const GetShiftEvent
+                                                                      .getShift());
+                                                            }
+                                                          });
+                                                        } else {
+                                                          // Handle the case where any of the required fields are null
+                                                          print(
+                                                              'Some required fields are null');
+                                                          print(
+                                                              'Clock In Time: ${item.clockInTime}');
+                                                          print(
+                                                              'Clock Out Time: ${item.clockOutTime}');
+                                                        }
+                                                      },
+                                                      icon: const Icon(
+                                                          Icons.edit_outlined),
+                                                    ),
+                                                  ],
+                                                )),
+                                              ]),
+                                            )
+                                            .toList(),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        if (searchResult.isNotEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: PaginationWidget(),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                      );
+                    },
+                    orElse: () => const SizedBox(), // Handle other states here
+                  );
+                },
+              ),
             ],
           ),
         ),

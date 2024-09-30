@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hrm_inventory_pos_app/presentation/home/dialogs/add_new_holiday.dart';
 
 import '../../../core/core.dart';
-import '../dialogs/add_new_holiday.dart';
-import '../dialogs/delete_dialog.dart';
+import '../../../data/datasources/auth_local_datasource.dart';
+import '../bloc/holiday/delete_holiday/delete_holiday_bloc.dart';
+import '../bloc/holiday/get_holiday/get_holiday_bloc.dart';
 import '../dialogs/edit_holiday.dart';
-import '../models/holiday_model.dart';
+import '../dialogs/generic_delete_dialog.dart';
 import '../widgets/app_bar_widget.dart';
-import '../widgets/pagination_widget.dart';
+import 'dart:developer' as developer;
 
 class HolidayPage extends StatefulWidget {
   const HolidayPage({super.key});
@@ -16,15 +19,29 @@ class HolidayPage extends StatefulWidget {
 }
 
 class _HolidayPageState extends State<HolidayPage> {
-  bool isEmptyData = false;
+  int companyId = 1; // Replace with actual value
+  int createdBy =
+      234; // Replace with actual value (e.g., current logged-in user ID)
 
   final searchController = TextEditingController();
-  late List<HolidayModel> searchResult;
 
   @override
   void initState() {
-    searchResult = holidays;
     super.initState();
+    _fetchUserData();
+    context.read<GetHolidayBloc>().add(const GetHolidayEvent.getHolidays());
+  }
+
+  Future<void> _fetchUserData() async {
+    try {
+      final authData = await AuthLocalDatasource().getAuthData();
+      setState(() {
+        createdBy =
+            authData.user?.id ?? 0; // Use the user ID from the auth data
+      });
+    } catch (e) {
+      developer.log('Error fetching user data: $e', name: 'HolidayPage');
+    }
   }
 
   @override
@@ -51,13 +68,7 @@ class _HolidayPageState extends State<HolidayPage> {
                         controller: searchController,
                         hintText: 'Quick search..',
                         onChanged: (value) {
-                          searchResult = holidays
-                              .where((element) => element.holidayName
-                                  .toLowerCase()
-                                  .contains(
-                                      searchController.text.toLowerCase()))
-                              .toList();
-                          setState(() {});
+                          // Implement search logic if needed
                         },
                       ),
                     ),
@@ -66,7 +77,8 @@ class _HolidayPageState extends State<HolidayPage> {
                       onPressed: () => showDialog(
                         context: context,
                         builder: (context) => AddNewHoliday(
-                          onConfirmTap: () {},
+                          companyId: companyId,
+                          createdBy: createdBy,
                         ),
                       ),
                       label: 'Add New Holiday',
@@ -76,123 +88,192 @@ class _HolidayPageState extends State<HolidayPage> {
                   ],
                 ),
               ),
-              if (isEmptyData) ...[
-                const Padding(
-                  padding: EdgeInsets.all(70.0),
-                  child: Center(
-                    child: EmptyPlaceholder2(),
-                  ),
-                ),
-              ] else ...[
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: DataTable(
-                              dataRowMinHeight: 30.0,
-                              dataRowMaxHeight: 60.0,
-                              columns: [
-                                DataColumn(
-                                  label: SizedBox(
-                                    height: 24.0,
-                                    width: 24.0,
-                                    child: Checkbox(
-                                      value: false,
-                                      onChanged: (value) {},
-                                    ),
+              BlocBuilder<GetHolidayBloc, GetHolidayState>(
+                builder: (context, state) {
+                  return state.maybeWhen(
+                    orElse: () => const SizedBox(),
+                    loading: () {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      );
+                    },
+                    loaded: (holidays) {
+                      return Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.topLeft,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    dataRowMinHeight: 30.0,
+                                    dataRowMaxHeight: 60.0,
+                                    columns: [
+                                      DataColumn(
+                                        label: SizedBox(
+                                          height: 24.0,
+                                          width: 24.0,
+                                          child: Checkbox(
+                                            value: false,
+                                            onChanged: (value) {},
+                                          ),
+                                        ),
+                                      ),
+                                      const DataColumn(
+                                          label: Text('Holiday Name')),
+                                      const DataColumn(label: Text('Date')),
+                                      const DataColumn(
+                                          label: Text('Is Weekend')),
+                                      const DataColumn(label: Text('')),
+                                    ],
+                                    rows: holidays.isEmpty
+                                        ? [
+                                            const DataRow(
+                                              cells: [
+                                                DataCell(Row(
+                                                  children: [
+                                                    Icon(Icons.highlight_off),
+                                                    SpaceWidth(4.0),
+                                                    Text('Data not found.'),
+                                                  ],
+                                                )),
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                                DataCell.empty,
+                                              ],
+                                            ),
+                                          ]
+                                        : holidays
+                                            .map((item) => DataRow(cells: [
+                                                  DataCell(
+                                                    SizedBox(
+                                                      height: 24.0,
+                                                      width: 24.0,
+                                                      child: Checkbox(
+                                                        value: false,
+                                                        onChanged: (value) {},
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  DataCell(Text(
+                                                    item.name!,
+                                                    style: const TextStyle(
+                                                      fontSize: 16.0,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: AppColors.black,
+                                                    ),
+                                                  )),
+                                                  DataCell(Text(
+                                                    item.date
+                                                            ?.toLocal()
+                                                            .toString()
+                                                            .split(' ')[0] ??
+                                                        '',
+                                                    style: const TextStyle(
+                                                      fontSize: 16.0,
+                                                      color: AppColors.black,
+                                                    ),
+                                                  )),
+                                                  DataCell(Text(
+                                                    item.isWeekend == 1
+                                                        ? 'Yes'
+                                                        : 'No',
+                                                    style: const TextStyle(
+                                                      fontSize: 16.0,
+                                                      color: AppColors.black,
+                                                    ),
+                                                  )),
+                                                  DataCell(Row(
+                                                    children: [
+                                                      IconButton(
+                                                        onPressed: () =>
+                                                            showDialog(
+                                                          context: context,
+                                                          builder: (context) =>
+                                                              GenericDeleteDialog(
+                                                            itemName:
+                                                                item.name ??
+                                                                    'Holiday',
+                                                            onConfirmTap:
+                                                                () async {
+                                                              try {
+                                                                // Perform the delete operation
+                                                                context
+                                                                    .read<
+                                                                        DeleteHolidayBloc>()
+                                                                    .add(
+                                                                      DeleteHolidayEvent
+                                                                          .deleteHoliday(
+                                                                              item.id!),
+                                                                    );
+                                                                // Refresh the list after deletion
+                                                                context
+                                                                    .read<
+                                                                        GetHolidayBloc>()
+                                                                    .add(const GetHolidayEvent
+                                                                        .getHolidays());
+
+                                                                // Return true if the operation was successful
+                                                                return true;
+                                                              } catch (e) {
+                                                                // Handle the error (e.g., log it)
+                                                                developer.log(
+                                                                    'Error deleting item: $e',
+                                                                    name:
+                                                                        'HolidayPage');
+                                                                // Return false if the operation failed
+                                                                return false;
+                                                              }
+                                                            },
+                                                          ),
+                                                        ),
+                                                        icon: const Icon(Icons
+                                                            .delete_outline),
+                                                      ),
+                                                      IconButton(
+                                                        onPressed: () =>
+                                                            showDialog(
+                                                          context: context,
+                                                          builder: (context) =>
+                                                              EditHoliday(
+                                                            item: item,
+                                                            holidayId: item.id!,
+                                                            companyId:
+                                                                companyId,
+                                                            createdBy:
+                                                                createdBy,
+                                                            initialName:
+                                                                item.name!,
+                                                            initialDate:
+                                                                item.date!,
+                                                            initialIsWeekend:
+                                                                item.isWeekend ==
+                                                                    1,
+                                                          ),
+                                                        ),
+                                                        icon: const Icon(Icons
+                                                            .edit_outlined),
+                                                      ),
+                                                    ],
+                                                  )),
+                                                ]))
+                                            .toList(),
                                   ),
                                 ),
-                                const DataColumn(label: Text('Holiday Name')),
-                                const DataColumn(label: Text('Date')),
-                                const DataColumn(label: Text('')),
-                              ],
-                              rows: searchResult.isEmpty
-                                  ? [
-                                      const DataRow(
-                                        cells: [
-                                          DataCell(Row(
-                                            children: [
-                                              Icon(Icons.highlight_off),
-                                              SpaceWidth(4.0),
-                                              Text('Data tidak ditemukan..'),
-                                            ],
-                                          )),
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                          DataCell.empty,
-                                        ],
-                                      ),
-                                    ]
-                                  : searchResult
-                                      .map(
-                                        (item) => DataRow(cells: [
-                                          DataCell(
-                                            SizedBox(
-                                              height: 24.0,
-                                              width: 24.0,
-                                              child: Checkbox(
-                                                value: false,
-                                                onChanged: (value) {},
-                                              ),
-                                            ),
-                                          ),
-                                          DataCell(Text(
-                                            item.holidayName,
-                                            style: const TextStyle(
-                                              fontSize: 16.0,
-                                              fontWeight: FontWeight.w500,
-                                              color: AppColors.black,
-                                            ),
-                                          )),
-                                          DataCell(Text(
-                                              item.datetime.toFormattedDate())),
-                                          DataCell(Row(
-                                            children: [
-                                              IconButton(
-                                                onPressed: () => showDialog(
-                                                  context: context,
-                                                  builder: (context) =>
-                                                      DeleteDialog(
-                                                    onConfirmTap: () {},
-                                                  ),
-                                                ),
-                                                icon: const Icon(
-                                                    Icons.delete_outline),
-                                              ),
-                                              IconButton(
-                                                onPressed: () => showDialog(
-                                                  context: context,
-                                                  builder: (context) =>
-                                                      EditHoliday(
-                                                    item: item,
-                                                    onConfirmTap: () {},
-                                                  ),
-                                                ),
-                                                icon: const Icon(
-                                                    Icons.edit_outlined),
-                                              ),
-                                            ],
-                                          )),
-                                        ]),
-                                      )
-                                      .toList(),
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                        if (searchResult.isNotEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: PaginationWidget(),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                      );
+                    },
+                  );
+                },
+              ),
             ],
           ),
         ),

@@ -66,19 +66,50 @@ class $AssetsImagesGen {
   AssetGenImage get bgLogin =>
       const AssetGenImage('assets/images/bg_login.png');
 
+  /// File path: assets/images/bg_loginASLI.png
+  AssetGenImage get bgLoginASLI =>
+      const AssetGenImage('assets/images/bg_loginASLI.png');
+
+  /// File path: assets/images/bg_loginSVG.svg
+  String get bgLoginSVG => 'assets/images/bg_loginSVG.svg';
+
   /// File path: assets/images/logo_primary.png
   AssetGenImage get logoPrimary =>
       const AssetGenImage('assets/images/logo_primary.png');
+
+  /// File path: assets/images/logo_primaryASLI.png
+  AssetGenImage get logoPrimaryASLI =>
+      const AssetGenImage('assets/images/logo_primaryASLI.png');
+
+  /// File path: assets/images/logo_primarySVG.svg
+  String get logoPrimarySVG => 'assets/images/logo_primarySVG.svg';
 
   /// File path: assets/images/logo_white.png
   AssetGenImage get logoWhite =>
       const AssetGenImage('assets/images/logo_white.png');
 
+  /// File path: assets/images/logo_whiteASLI.png
+  AssetGenImage get logoWhiteASLI =>
+      const AssetGenImage('assets/images/logo_whiteASLI.png');
+
+  /// File path: assets/images/logo_whiteSVG.svg
+  String get logoWhiteSVG => 'assets/images/logo_whiteSVG.svg';
+
   /// Directory path: assets/images/menu
   $AssetsImagesMenuGen get menu => const $AssetsImagesMenuGen();
 
   /// List of all assets
-  List<AssetGenImage> get values => [bgLogin, logoPrimary, logoWhite];
+  List<dynamic> get values => [
+        bgLogin,
+        bgLoginASLI,
+        bgLoginSVG,
+        logoPrimary,
+        logoPrimaryASLI,
+        logoPrimarySVG,
+        logoWhite,
+        logoWhiteASLI,
+        logoWhiteSVG
+      ];
 }
 
 class $AssetsIconsAlertGen {
@@ -105,6 +136,9 @@ class $AssetsIconsNavGen {
 
   /// File path: assets/icons/nav/attendance.svg
   String get attendance => 'assets/icons/nav/attendance.svg';
+
+  /// File path: assets/icons/nav/basic_salary.svg
+  String get basicSalary => 'assets/icons/nav/basic_salary.svg';
 
   /// File path: assets/icons/nav/dashboard.svg
   String get dashboard => 'assets/icons/nav/dashboard.svg';
@@ -139,6 +173,7 @@ class $AssetsIconsNavGen {
   /// List of all assets
   List<String> get values => [
         attendance,
+        basicSalary,
         dashboard,
         departements,
         designations,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 const List<String> _dayNames = [
   'Minggu',
@@ -37,6 +38,13 @@ extension DateTimeExt on DateTime {
     String minute = this.minute.toString().padLeft(2, '0');
     return '$hour:$minute WIB';
   }
+
+  
+  String toDDMMYYYY() {
+    return DateFormat('dd-MM-yyyy').format(this);
+  }
+
+
 }
 
 extension TimeOfDayExt on TimeOfDay {
